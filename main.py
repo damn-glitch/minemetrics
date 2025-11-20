@@ -2142,7 +2142,7 @@ st.markdown("---")
 st.markdown(f"""
 <div style='text-align: center; padding: 20px 0;'>
     <p style='color: #888; font-size: 14px;'>
-        MineMetrics v2.0 | Authors: Alisher Beisembekov & Syrym Seirkov | 
+        MineMetrics v2.0 | Authors: Alisher Beisembekov & Syrym Serikov | 
         <span style='color: #28a745;'>● All Systems Operational</span>
     </p>
 </div>
@@ -2154,3 +2154,4 @@ st.markdown("""
     🤖
 </button>
 """, unsafe_allow_html=True)
+
