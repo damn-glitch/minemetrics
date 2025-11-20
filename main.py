@@ -1,4 +1,4 @@
-#minemetrics
+# minemetrics
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -409,14 +409,14 @@ def generate_enhanced_project_data(n_projects=100):
 
         # Risk scoring based on multiple factors
         technical_risk = (1500 - depth) / 1500 * 0.3 + min(ore_grade / grade_max, 1) * 0.4 + (
-                    resource_estimate / 500) * 0.3
+                resource_estimate / 500) * 0.3
         economic_risk = min(npv / capex, 1) * 0.5 + (25 - project['irr_percent']) / 30 * 0.5
         esg_risk = (project['environmental_impact_score'] / 10) * 0.4 + (project['social_score'] / 10) * 0.3 + (
-                    project['governance_score'] / 10) * 0.3
+                project['governance_score'] / 10) * 0.3
         country_risk = regions_data[region]['risk_multiplier']
 
         overall_risk = (
-                    technical_risk * 0.25 + (1 - economic_risk) * 0.35 + esg_risk * 0.25 + (1 / country_risk) * 0.15)
+                technical_risk * 0.25 + (1 - economic_risk) * 0.35 + esg_risk * 0.25 + (1 / country_risk) * 0.15)
         project['risk_score'] = round(overall_risk * 10, 1)
         project['risk_level'] = 'Low' if project['risk_score'] > 7 else 'Medium' if project[
                                                                                         'risk_score'] > 4 else 'High'
@@ -430,7 +430,6 @@ def generate_enhanced_project_data(n_projects=100):
         projects.append(project)
 
     return pd.DataFrame(projects)
-
 
 
 # Advanced ML model training
@@ -473,7 +472,7 @@ def train_ml_models(df):
     return models
 
 
-# Real-time market data fetching
+# Real-time market data fetching - FIXED VERSION
 @st.cache_data(ttl=3600)
 def fetch_market_data():
     """Fetch real commodity prices and market data"""
@@ -490,21 +489,35 @@ def fetch_market_data():
     for commodity, ticker in commodities.items():
         try:
             data = yf.Ticker(ticker)
-            hist = data.history(period="1mo")
-            current_price = hist['Close'].iloc[-1]
-            change = (hist['Close'].iloc[-1] - hist['Close'].iloc[0]) / hist['Close'].iloc[0] * 100
+            hist = data.history(period="30d")  # Changed to 30 days specifically
 
-            market_data[commodity] = {
-                'price': round(current_price, 2),
-                'change': round(change, 2),
-                'history': hist['Close'].values.tolist()
-            }
+            if len(hist) > 0:
+                current_price = hist['Close'].iloc[-1]
+                change = (hist['Close'].iloc[-1] - hist['Close'].iloc[0]) / hist['Close'].iloc[0] * 100
+
+                # Ensure we have exactly 30 data points
+                history_values = hist['Close'].values.tolist()
+                if len(history_values) < 30:
+                    # Pad with the last value if we have fewer than 30
+                    history_values.extend([history_values[-1]] * (30 - len(history_values)))
+                elif len(history_values) > 30:
+                    # Take only the last 30 values
+                    history_values = history_values[-30:]
+
+                market_data[commodity] = {
+                    'price': round(current_price, 2),
+                    'change': round(change, 2),
+                    'history': history_values
+                }
+            else:
+                raise Exception("No data returned")
         except:
             # Fallback to mock data if API fails
+            base_price = 1950 if commodity == 'Gold' else 24 if commodity == 'Silver' else 4.5 if commodity == 'Copper' else 100
             market_data[commodity] = {
-                'price': random.uniform(1800, 2000) if commodity == 'Gold' else random.uniform(20, 30),
-                'change': random.uniform(-5, 5),
-                'history': [random.uniform(1800, 2000) for _ in range(30)]
+                'price': round(random.uniform(base_price * 0.9, base_price * 1.1), 2),
+                'change': round(random.uniform(-5, 5), 2),
+                'history': [random.uniform(base_price * 0.9, base_price * 1.1) for _ in range(30)]
             }
 
     return market_data
@@ -713,7 +726,7 @@ if "🏠 Dashboard" in page:
             font=dict(color='white'),
             height=400
         )
-        st.plotly_chart(fig_npv, use_container_width=True)
+        st.plotly_chart(fig_npv, width='stretch')
 
     with col2:
         # Risk vs Return Scatter
@@ -734,7 +747,7 @@ if "🏠 Dashboard" in page:
             xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
             yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
         )
-        st.plotly_chart(fig_risk, use_container_width=True)
+        st.plotly_chart(fig_risk, width='stretch')
 
     # Project Timeline Gantt Chart
     st.markdown("### 📅 Project Timeline")
@@ -759,7 +772,7 @@ if "🏠 Dashboard" in page:
         xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
         yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
     )
-    st.plotly_chart(fig_timeline, use_container_width=True)
+    st.plotly_chart(fig_timeline, width='stretch')
 
 elif "🎯 Project Analysis" in page:
     st.markdown("""
@@ -950,7 +963,7 @@ elif "🎯 Project Analysis" in page:
                 xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
                 yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
             )
-            st.plotly_chart(fig_sensitivity, use_container_width=True)
+            st.plotly_chart(fig_sensitivity, width='stretch')
 
 elif "🤖 AI Predictions" in page:
     st.markdown("""
@@ -1004,7 +1017,7 @@ elif "🤖 AI Predictions" in page:
         xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
         yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
     )
-    st.plotly_chart(fig_importance, use_container_width=True)
+    st.plotly_chart(fig_importance, width='stretch')
 
     # Prediction simulator
     st.markdown("### 🔮 Project Success Simulator")
@@ -1132,12 +1145,20 @@ elif "📊 Market Intelligence" in page:
 
     selected_commodity = st.selectbox("Select Commodity", list(market_data.keys()))
 
-    if selected_commodity:
-        # Create price chart
+    if selected_commodity and selected_commodity in market_data:
+        # Create price chart with fixed data
         dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+        history_data = market_data[selected_commodity]['history']
+
+        # Ensure we have 30 data points
+        if len(history_data) != 30:
+            # Fallback to mock data if there's a mismatch
+            base_price = market_data[selected_commodity]['price']
+            history_data = [base_price * random.uniform(0.95, 1.05) for _ in range(30)]
+
         price_data = pd.DataFrame({
             'Date': dates,
-            'Price': market_data[selected_commodity]['history']
+            'Price': history_data
         })
 
         fig_price = px.line(
@@ -1155,7 +1176,7 @@ elif "📊 Market Intelligence" in page:
             xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
             yaxis=dict(gridcolor='rgba(255,255,255,0.1)', title='Price ($)')
         )
-        st.plotly_chart(fig_price, use_container_width=True)
+        st.plotly_chart(fig_price, width='stretch')
 
     # Market impact analysis
     st.markdown("### 🎯 Portfolio Impact Analysis")
@@ -1198,7 +1219,7 @@ elif "📊 Market Intelligence" in page:
             xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
             yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
         )
-        st.plotly_chart(fig_impact, use_container_width=True)
+        st.plotly_chart(fig_impact, width='stretch')
 
 elif "⚠️ Risk Management" in page:
     st.markdown("""
@@ -1291,7 +1312,7 @@ elif "⚠️ Risk Management" in page:
     )
 
     # Display the plot
-    st.plotly_chart(fig_matrix, use_container_width=True)
+    st.plotly_chart(fig_matrix, width='stretch')
 
     # Risk mitigation strategies
     st.markdown("### 🛡️ Risk Mitigation Strategies")
@@ -1415,7 +1436,7 @@ elif "🌱 ESG Analytics" in page:
         font=dict(color='white'),
         height=400
     )
-    st.plotly_chart(fig_radar, use_container_width=True)
+    st.plotly_chart(fig_radar, width='stretch')
 
     # Carbon footprint analysis
     st.markdown("### 🌍 Carbon Footprint Analysis")
@@ -1445,7 +1466,7 @@ elif "🌱 ESG Analytics" in page:
             font=dict(color='white'),
             height=400
         )
-        st.plotly_chart(fig_emissions, use_container_width=True)
+        st.plotly_chart(fig_emissions, width='stretch')
 
     with carbon_cols[1]:
         # Water usage efficiency
@@ -1467,7 +1488,7 @@ elif "🌱 ESG Analytics" in page:
             xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
             yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
         )
-        st.plotly_chart(fig_water, use_container_width=True)
+        st.plotly_chart(fig_water, width='stretch')
 
     # Sustainability targets
     st.markdown("### 🎯 Sustainability Targets & Progress")
@@ -1592,7 +1613,7 @@ elif "📈 Portfolio Optimizer" in page:
                 font=dict(color='white'),
                 height=400
             )
-            st.plotly_chart(fig_allocation, use_container_width=True)
+            st.plotly_chart(fig_allocation, width='stretch')
 
         with col2:
             # Expected returns timeline
@@ -1617,7 +1638,7 @@ elif "📈 Portfolio Optimizer" in page:
                 xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
                 yaxis=dict(gridcolor='rgba(255,255,255,0.1)', title='Cumulative Return ($M)')
             )
-            st.plotly_chart(fig_timeline, use_container_width=True)
+            st.plotly_chart(fig_timeline, width='stretch')
 
         # Selected projects table
         st.markdown("### 📋 Selected Projects")
@@ -1625,11 +1646,9 @@ elif "📈 Portfolio Optimizer" in page:
         display_cols = ['name', 'mineral_type', 'region', 'npv_million', 'irr_percent',
                         'capex_million', 'risk_score', 'environmental_impact_score']
 
+        # Use Streamlit's built-in coloring instead of pandas style.background_gradient
         st.dataframe(
-            portfolio[display_cols].style.background_gradient(
-                subset=['npv_million', 'irr_percent', 'risk_score'],
-                cmap='RdYlGn'
-            ),
+            portfolio[display_cols],
             use_container_width=True
         )
 
@@ -1963,10 +1982,8 @@ elif "📑 Reports" in page:
                 top_projects = st.session_state.projects.nlargest(5, 'npv_million')[
                     ['name', 'mineral_type', 'region', 'npv_million', 'irr_percent', 'risk_level']
                 ]
-                st.dataframe(
-                    top_projects.style.background_gradient(subset=['npv_million', 'irr_percent']),
-                    use_container_width=True
-                )
+                # Use basic dataframe display without pandas styling
+                st.dataframe(top_projects, use_container_width=True)
 
                 # Recommendations
                 st.markdown("#### 🎯 Strategic Recommendations")
@@ -2073,7 +2090,7 @@ elif "📑 Reports" in page:
                     xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
                     hovermode='x unified'
                 )
-                st.plotly_chart(fig_cf, use_container_width=True)
+                st.plotly_chart(fig_cf, width='stretch')
 
                 # Sensitivity table
                 st.markdown("#### 📊 Financial Sensitivity Analysis")
@@ -2089,17 +2106,8 @@ elif "📑 Reports" in page:
 
                 sensitivity_df = pd.DataFrame(sensitivity_data)
 
-                # Style the dataframe
-                def color_negative_red(val):
-                    if isinstance(val, (int, float)):
-                        color = '#dc3545' if val < 0 else '#28a745' if val > 0 else 'white'
-                        return f'color: {color}'
-                    return ''
-
-                st.dataframe(
-                    sensitivity_df.style.applymap(color_negative_red),
-                    use_container_width=True
-                )
+                # Display without styling for simplicity
+                st.dataframe(sensitivity_df, use_container_width=True)
 
     # Export options
     st.markdown("### 📥 Export Options")
