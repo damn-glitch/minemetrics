@@ -5,3 +5,4 @@ scikit-learn
 yfinance
 requests
 streamlit_lottie
+matplotlib
